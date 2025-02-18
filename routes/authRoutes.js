@@ -32,13 +32,13 @@ router.post("/register", async (req, res) => {
         }
 
         // Check if email already exists
-        let user = await User.findOne({ email });
+        let user = await User.exists({ email });
         if (user) {
             return res.status(400).json({ message: "User already exists with this email" });
         }
 
         // Check if username already exists
-        user = await User.findOne({ userName });
+        user = await User.exists({ userName });
         if (user) {
             return res.status(400).json({ message: "Username is already taken " });
         }

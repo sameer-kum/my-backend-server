@@ -37,7 +37,7 @@ const upload = multer({ storage: storage });
 // Add Authentication Routes
 app.use('/api/auth', authRoutes);
 
-// Protected Route Example
+// Get User profile
 app.get('/api/user/profile', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
@@ -48,7 +48,61 @@ app.get('/api/user/profile', authMiddleware, async (req, res) => {
   }
 });
 
+// Update User Profile
+app.put("/api/user/updateProfile", authMiddleware, async (req, res) => {
+  try {
+
+      const userId = req.user.userId; // Get user ID from token
+
+      const { name, userName, phoneNo, gender, maritalStatus, dateOfBirth, timeOfBirth, placeOfBirth, profilePhotoPath, language, password } = req.body;
+
+      // Check if username is being updated and already taken
+      if (userName) {
+          const existingUser = await User.findOne({ userName, _id: { $ne: userId } });
+          if (existingUser) {
+              return res.status(400).json({ message: "Username is already taken" });
+          }
+      }
+
+      let updateData = { name, userName, phoneNo, gender, maritalStatus, dateOfBirth, timeOfBirth, placeOfBirth, profilePhotoPath, language };
+
+      // If password is provided, hash it before updating
+      if (password) {
+          const salt = await bcrypt.genSalt(10);
+          updateData.password = await bcrypt.hash(password, salt);
+      }
+
+      // Update user profile
+      const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true, select: "-password" });
+
+      res.json({ message: "Profile updated successfully", user: updatedUser });
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// delete User Account
+app.delete('/api/user/delete', authMiddleware, async (req, res) => {
+  try {
+      const userId = req.user.userId; // Extract user ID from JWT token
+
+      // Find and delete user
+      const user = await User.findByIdAndDelete(userId);
+      console.log("Received USERID:", userId);
+      if (!user) {
+          return res.status(404).json({ message: "User not found sorry" });
+      }
+
+      res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Server error" });
+  }
+});
+
 // Start server
-app.listen(port,'0.0.0.0', () => {
+app.listen(port,'0.0.0.0',  () => {
   console.log(`Server running at http://localhost:${port}`);
 });
